@@ -13,5 +13,4 @@ public class FiveInARowApplication {
 		application.run(args);
 	}
 }
-
 // https://piskvorky.jobs.cz/api/doc
