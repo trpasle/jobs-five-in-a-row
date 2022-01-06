@@ -12,7 +12,6 @@ public class FiveInARowApplication {
 		application.setWebApplicationType(WebApplicationType.NONE);
 		application.run(args);
 	}
-
 }
 
 // https://piskvorky.jobs.cz/api/doc
