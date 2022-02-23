@@ -5,9 +5,6 @@ import lombok.Getter;
 
 import java.io.Serializable;
 
-@AllArgsConstructor @Getter
-public class GameConnectionModel implements Serializable {
-    private final int statusCode;
-    private final String gameToken;
-    private final String gameId;
+public record GameConnectionModel(int statusCode, String gameToken,
+                                  String gameId) implements Serializable {
 }

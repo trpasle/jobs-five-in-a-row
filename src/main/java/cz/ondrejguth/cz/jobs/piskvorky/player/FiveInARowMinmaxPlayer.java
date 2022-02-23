@@ -1,4 +1,4 @@
-package cz.ondrejguth.cz.jobs.piskvorky;
+package cz.ondrejguth.cz.jobs.piskvorky.player;
 
 //TODO
 public class FiveInARowMinmaxPlayer {

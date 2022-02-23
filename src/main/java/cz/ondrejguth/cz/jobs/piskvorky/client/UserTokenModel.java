@@ -5,8 +5,5 @@ import lombok.Getter;
 
 import java.io.Serializable;
 
-@Getter
-@AllArgsConstructor
-public class UserTokenModel implements Serializable {
-    private final String userToken;
+public record UserTokenModel (String userToken) implements Serializable {
 }
