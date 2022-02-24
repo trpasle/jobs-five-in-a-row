@@ -1,7 +1,4 @@
-package cz.ondrejguth.cz.jobs.piskvorky.client;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+package cz.ondrejguth.cz.jobs.piskvorky.client_api;
 
 import java.io.Serializable;
 

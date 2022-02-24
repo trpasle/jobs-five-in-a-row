@@ -1,4 +1,4 @@
-package cz.ondrejguth.cz.jobs.piskvorky.client;
+package cz.ondrejguth.cz.jobs.piskvorky.client_api;
 
 import java.io.Serializable;
 
