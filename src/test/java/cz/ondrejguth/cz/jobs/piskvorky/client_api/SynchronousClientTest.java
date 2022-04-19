@@ -1,6 +1,9 @@
 package cz.ondrejguth.cz.jobs.piskvorky.client_api;
 
-import io.netty.handler.logging.LogLevel;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okio.ByteString;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,15 +12,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.transport.logging.AdvancedByteBufFormat;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.io.IOException;
 
 @ExtendWith(MockitoExtension.class)
 class SynchronousClientTest {
@@ -27,34 +24,171 @@ class SynchronousClientTest {
     @Mock
     private WebClientConnectionManager connectionManager;
 
+    private MockWebServer mockApi;
 
-    @BeforeEach
-    void setUp() {
-//        final WebClient webClient = WebClient.builder()
-//                .clientConnector(new ReactorClientHttpConnector(HttpClient.create().wiretap("reactor.netty.http.client.HttpClient",
-//                        LogLevel.DEBUG, AdvancedByteBufFormat.TEXTUAL)))
-//                .baseUrl("https://piskvorky.jobs.cz/api/v1")
-//                .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
-//                .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-//                .build();
-//        Mockito.when(connectionManager.getClient()).thenReturn(webClient);
+    private final GameConnectionModel testConnectionModel = new GameConnectionModel(201, "c9d78e8e-30fc-42f7-91b8-0aa40f3f9ba0", "907e768f-5896-4d5d-81c7-174fbb7a3e40");
+
+    private void setUpServer() throws IOException {
+        mockApi = new MockWebServer();
+        mockApi.start();
+        Mockito.when(connectionManager.getClient()).thenReturn(WebClient.create(mockApi.url("/").toString()));
+    }
+
+    private void tearDownServer() throws IOException {
+        mockApi.shutdown();
+    }
+
+
+    @Test
+    void getMinXCoordinate() {
+        Assertions.assertEquals(SynchronousClient.MIN_X_COORD, instance.getMinXCoordinate());
     }
 
     @Test
-    void getMinCoordinate() {
-        Assertions.assertEquals(SynchronousClient.MIN_COORDINATE, instance.getMinCoordinate());
+    void getMaxXCoordinate() {
+        Assertions.assertEquals(SynchronousClient.MAX_X_COORD, instance.getMaxXCoordinate());
     }
 
     @Test
-    void getMaxCoordinate() {
-        Assertions.assertEquals(SynchronousClient.MAX_COORDINATE, instance.getMaxCoordinate());
+    void getMinYCoordinate() {
+        Assertions.assertEquals(SynchronousClient.MIN_Y_COORD, instance.getMinYCoordinate());
     }
 
     @Test
-    void newGame() {
+    void getMaxYCoordinate() {
+        Assertions.assertEquals(SynchronousClient.MAX_Y_COORD, instance.getMaxYCoordinate());
     }
 
     @Test
-    void play() {
+    void newGame() throws InterruptedException, IOException {
+        setUpServer();
+        mockApi.enqueue(new MockResponse().setResponseCode(201).addHeader("Content-Type", "application/json").setBody("{\n" +
+                "  \"statusCode\": 201,\n" +
+                "  \"gameToken\": \"c9d78e8e-30fc-42f7-91b8-0aa40f3f9ba0\",\n" +
+                "  \"gameId\": \"907e768f-5896-4d5d-81c7-174fbb7a3e40\",\n" +
+                "  \"headers\": {}\n" +
+                "}"));
+        Assertions.assertEquals(
+                testConnectionModel,
+                instance.newGame()
+        );
+
+        var recReq = mockApi.takeRequest();
+        Assertions.assertEquals(recReq.getMethod(), "POST");
+        Assertions.assertEquals(recReq.getPath(), SynchronousClient.NEW_GAME_URI);
+        Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("userToken")) > -1);
+        tearDownServer();
+    }
+
+    @Test
+    void play() throws InterruptedException, IOException {
+        setUpServer();
+        mockApi.enqueue(new MockResponse().setResponseCode(201).addHeader("Content-Type", "application/json").setBody("{\n" +
+                "  \"statusCode\": 201,\n" +
+                "  \"playerCrossId\": \"b48ce652-3bb9-4180-99b9-459a282f58ac\",\n" +
+                "  \"playerCircleId\": \"af05f814-a669-4287-8ffb-a317d831a4f6\",\n" +
+                "  \"actualPlayerId\": \"af05f814-a669-4287-8ffb-a317d831a4f6\",\n" +
+                "  \"winnerId\": null,\n" +
+                "  \"coordinates\": [\n" +
+                "    {\n" +
+                "      \"playerId\": \"b48ce652-3bb9-4180-99b9-459a282f58ac\",\n" +
+                "      \"x\": 0,\n" +
+                "      \"y\": 0\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"headers\": {}\n" +
+                "}"));
+
+        var expTurnResponseModel = new TurnResponseModel(
+                    201,
+                    "b48ce652-3bb9-4180-99b9-459a282f58ac",
+                    "af05f814-a669-4287-8ffb-a317d831a4f6",
+                    "af05f814-a669-4287-8ffb-a317d831a4f6",
+                    null,
+                    new CoordinateModel[] {new CoordinateModel("b48ce652-3bb9-4180-99b9-459a282f58ac", 0, 0)}
+            );
+        var methTurnResponseModel = instance.play(testConnectionModel, 0, 0);
+        Assertions.assertEquals(expTurnResponseModel.statusCode(), methTurnResponseModel.statusCode());
+        Assertions.assertEquals(expTurnResponseModel.actualPlayerId(), methTurnResponseModel.actualPlayerId());
+        Assertions.assertEquals(expTurnResponseModel.playerCircleId(), methTurnResponseModel.playerCircleId());
+        Assertions.assertEquals(expTurnResponseModel.playerCrossId(), methTurnResponseModel.playerCrossId());
+        Assertions.assertEquals(expTurnResponseModel.winnerId(), methTurnResponseModel.winnerId());
+        Assertions.assertArrayEquals(expTurnResponseModel.coordinates(), methTurnResponseModel.coordinates());
+
+        var recReq = mockApi.takeRequest();
+        Assertions.assertEquals(recReq.getMethod(), "POST");
+        Assertions.assertEquals(recReq.getPath(), SynchronousClient.PLAY_URI);
+        Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("userToken")) > -1);
+        Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("gameToken")) > -1);
+        Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("positionX")) > -1);
+        Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("positionY")) > -1);
+        tearDownServer();
+    }
+
+    @Test
+    void playUsedCoordinates() throws IOException {
+        setUpServer();
+        mockApi.enqueue(new MockResponse().setResponseCode(409).addHeader("Content-Type", "application/json").setBody("{\n" +
+                "  \"statusCode\": 409,\n" +
+                "  \"errors\": {\n" +
+                "    \"ilegalMove\": \"This coordinates are used!\"\n" +
+                "  },\n" +
+                "  \"headers\": {}\n" +
+                "}"));
+
+        Assertions.assertThrows(CoordinatesUsedException.class, () -> instance.play(testConnectionModel, 0, 0));
+        tearDownServer();
+    }
+
+    @Test
+    void playInvalidGame() throws IOException {
+        setUpServer();
+        mockApi.enqueue(new MockResponse().setResponseCode(401).addHeader("Content-Type", "application/json").setBody("{\n" +
+                "  \"statusCode\": 401,\n" +
+                "  \"errors\": {\n" +
+                "    \"gameToken\": \"Invalid game token.\"\n" +
+                "  },\n" +
+                "  \"headers\": {}\n" +
+                "}"));
+
+        Assertions.assertThrows(InvalidGameException.class, () -> instance.play(testConnectionModel, 0, 0));
+        tearDownServer();
+    }
+
+    @Test
+    void playGameCompleted() throws IOException {
+        setUpServer();
+        mockApi.enqueue(new MockResponse().setResponseCode(226).addHeader("Content-Type", "application/json").setBody("{\n" +
+                "  \"statusCode\": 226,\n" +
+                "  \"playerCrossId\": \"b48ce652-3bb9-4180-99b9-459a282f58ac\",\n" +
+                "  \"playerCircleId\": \"af05f814-a669-4287-8ffb-a317d831a4f6\",\n" +
+                "  \"actualPlayerId\": \"af05f814-a669-4287-8ffb-a317d831a4f6\",\n" +
+                "  \"winnerId\": \"af05f814-a669-4287-8ffb-a317d831a4f6\",\n" +
+                "  \"coordinates\": [\n" +
+                "    {\n" +
+                "      \"playerId\": \"b48ce652-3bb9-4180-99b9-459a282f58ac\",\n" +
+                "      \"x\": 0,\n" +
+                "      \"y\": 0\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"headers\": {}\n" +
+                "}"));
+        var expTurnResponseModel = new TurnResponseModel(
+                226,
+                "b48ce652-3bb9-4180-99b9-459a282f58ac",
+                "af05f814-a669-4287-8ffb-a317d831a4f6",
+                "af05f814-a669-4287-8ffb-a317d831a4f6",
+                "af05f814-a669-4287-8ffb-a317d831a4f6",
+                new CoordinateModel[] {new CoordinateModel("b48ce652-3bb9-4180-99b9-459a282f58ac", 0, 0)}
+        );
+        var methTurnResponseModel = instance.play(testConnectionModel, 0, 0);
+        Assertions.assertEquals(expTurnResponseModel.statusCode(), methTurnResponseModel.statusCode());
+        Assertions.assertEquals(expTurnResponseModel.actualPlayerId(), methTurnResponseModel.actualPlayerId());
+        Assertions.assertEquals(expTurnResponseModel.playerCircleId(), methTurnResponseModel.playerCircleId());
+        Assertions.assertEquals(expTurnResponseModel.playerCrossId(), methTurnResponseModel.playerCrossId());
+        Assertions.assertEquals(expTurnResponseModel.winnerId(), methTurnResponseModel.winnerId());
+        Assertions.assertArrayEquals(expTurnResponseModel.coordinates(), methTurnResponseModel.coordinates());
+
+        tearDownServer();
     }
 }

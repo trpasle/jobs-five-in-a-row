@@ -1,7 +1,7 @@
 package cz.ondrejguth.cz.jobs.piskvorky;
 
 import cz.ondrejguth.cz.jobs.piskvorky.client_api.CoordinateModel;
-import cz.ondrejguth.cz.jobs.piskvorky.client_api.InvalidTurnException;
+import cz.ondrejguth.cz.jobs.piskvorky.client_api.CoordinatesUsedException;
 import cz.ondrejguth.cz.jobs.piskvorky.client_api.SynchronousClient;
 import cz.ondrejguth.cz.jobs.piskvorky.client_api.TurnResponseModel;
 import cz.ondrejguth.cz.jobs.piskvorky.player.RandomPlayer;
@@ -19,11 +19,11 @@ public class PlayerFacade implements ApplicationListener<ApplicationReadyEvent> 
     private final RandomPlayer player;
 
     public int getMinCoordinate() {
-        return client.getMinCoordinate();
+        return client.getMinXCoordinate();
     }
 
     public int getMaxCoordinate() {
-        return client.getMaxCoordinate();
+        return client.getMaxXCoordinate();
     }
 
 
@@ -39,7 +39,7 @@ public class PlayerFacade implements ApplicationListener<ApplicationReadyEvent> 
             try {
                 final var newTurn = player.computeTurn(turnResponse.coordinates());
                 turnResponse = client.play(connModel, newTurn.x(), newTurn.y());
-            } catch (final InvalidTurnException e) {
+            } catch (final CoordinatesUsedException e) {
                 log.debug("Invalid turn", e);
                 //try again with different coordinates
             }
