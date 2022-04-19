@@ -18,13 +18,17 @@ public class PlayerFacade implements ApplicationListener<ApplicationReadyEvent> 
     private final SynchronousClient client;
     private final RandomPlayer player;
 
-    public int getMinCoordinate() {
+    public int getMinXCoordinate() {
         return client.getMinXCoordinate();
     }
 
-    public int getMaxCoordinate() {
+    public int getMaxXCoordinate() {
         return client.getMaxXCoordinate();
     }
+
+    public int getMinYCoordinate() { return client.getMinYCoordinate();}
+
+    public int getMaxYCoordinate() { return client.getMaxYCoordinate();}
 
 
     public void playGame() {

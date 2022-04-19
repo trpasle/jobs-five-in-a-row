@@ -19,7 +19,7 @@ public class RandomPlayer {
 
     public CoordinateModel computeTurn(final CoordinateModel[] currentCoordinates) {
         return new CoordinateModel(null,
-                random.nextInt(playerFacade.getMinCoordinate(), playerFacade.getMaxCoordinate()),
-                random.nextInt(playerFacade.getMinCoordinate(), playerFacade.getMaxCoordinate()));
+                random.nextInt(playerFacade.getMinXCoordinate(), playerFacade.getMaxXCoordinate()),
+                random.nextInt(playerFacade.getMinYCoordinate(), playerFacade.getMaxYCoordinate()));
     }
 }
