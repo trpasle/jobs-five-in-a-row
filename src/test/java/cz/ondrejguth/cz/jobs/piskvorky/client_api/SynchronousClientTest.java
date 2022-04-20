@@ -28,40 +28,21 @@ class SynchronousClientTest {
 
     private final GameConnectionModel testConnectionModel = new GameConnectionModel(201, "c9d78e8e-30fc-42f7-91b8-0aa40f3f9ba0", "907e768f-5896-4d5d-81c7-174fbb7a3e40");
 
-    private void setUpServer() throws IOException {
+    @BeforeEach
+    private void setUp() throws IOException {
         mockApi = new MockWebServer();
         mockApi.start();
         Mockito.when(connectionManager.getClient()).thenReturn(WebClient.create(mockApi.url("/").toString()));
     }
 
-    private void tearDownServer() throws IOException {
+    @AfterEach
+    private void tearDown() throws IOException {
         mockApi.shutdown();
     }
 
 
     @Test
-    void getMinXCoordinate() {
-        Assertions.assertEquals(SynchronousClient.MIN_X_COORD, instance.getMinXCoordinate());
-    }
-
-    @Test
-    void getMaxXCoordinate() {
-        Assertions.assertEquals(SynchronousClient.MAX_X_COORD, instance.getMaxXCoordinate());
-    }
-
-    @Test
-    void getMinYCoordinate() {
-        Assertions.assertEquals(SynchronousClient.MIN_Y_COORD, instance.getMinYCoordinate());
-    }
-
-    @Test
-    void getMaxYCoordinate() {
-        Assertions.assertEquals(SynchronousClient.MAX_Y_COORD, instance.getMaxYCoordinate());
-    }
-
-    @Test
     void newGame() throws InterruptedException, IOException {
-        setUpServer();
         mockApi.enqueue(new MockResponse().setResponseCode(201).addHeader("Content-Type", "application/json").setBody("{\n" +
                 "  \"statusCode\": 201,\n" +
                 "  \"gameToken\": \"c9d78e8e-30fc-42f7-91b8-0aa40f3f9ba0\",\n" +
@@ -75,14 +56,12 @@ class SynchronousClientTest {
 
         var recReq = mockApi.takeRequest();
         Assertions.assertEquals(recReq.getMethod(), "POST");
-        Assertions.assertEquals(recReq.getPath(), SynchronousClient.NEW_GAME_URI);
+        Assertions.assertEquals(recReq.getPath(), ApiV1Constants.NEW_GAME_URI);
         Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("userToken")) > -1);
-        tearDownServer();
     }
 
     @Test
     void play() throws InterruptedException, IOException {
-        setUpServer();
         mockApi.enqueue(new MockResponse().setResponseCode(201).addHeader("Content-Type", "application/json").setBody("{\n" +
                 "  \"statusCode\": 201,\n" +
                 "  \"playerCrossId\": \"b48ce652-3bb9-4180-99b9-459a282f58ac\",\n" +
@@ -117,17 +96,15 @@ class SynchronousClientTest {
 
         var recReq = mockApi.takeRequest();
         Assertions.assertEquals(recReq.getMethod(), "POST");
-        Assertions.assertEquals(recReq.getPath(), SynchronousClient.PLAY_URI);
+        Assertions.assertEquals(recReq.getPath(), ApiV1Constants.PLAY_URI);
         Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("userToken")) > -1);
         Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("gameToken")) > -1);
         Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("positionX")) > -1);
         Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("positionY")) > -1);
-        tearDownServer();
     }
 
     @Test
     void playUsedCoordinates() throws IOException {
-        setUpServer();
         mockApi.enqueue(new MockResponse().setResponseCode(409).addHeader("Content-Type", "application/json").setBody("{\n" +
                 "  \"statusCode\": 409,\n" +
                 "  \"errors\": {\n" +
@@ -137,12 +114,10 @@ class SynchronousClientTest {
                 "}"));
 
         Assertions.assertThrows(CoordinatesUsedException.class, () -> instance.play(testConnectionModel, 0, 0));
-        tearDownServer();
     }
 
     @Test
     void playInvalidGame() throws IOException {
-        setUpServer();
         mockApi.enqueue(new MockResponse().setResponseCode(401).addHeader("Content-Type", "application/json").setBody("{\n" +
                 "  \"statusCode\": 401,\n" +
                 "  \"errors\": {\n" +
@@ -152,12 +127,10 @@ class SynchronousClientTest {
                 "}"));
 
         Assertions.assertThrows(InvalidGameException.class, () -> instance.play(testConnectionModel, 0, 0));
-        tearDownServer();
     }
 
     @Test
     void playGameCompleted() throws IOException {
-        setUpServer();
         mockApi.enqueue(new MockResponse().setResponseCode(226).addHeader("Content-Type", "application/json").setBody("{\n" +
                 "  \"statusCode\": 226,\n" +
                 "  \"playerCrossId\": \"b48ce652-3bb9-4180-99b9-459a282f58ac\",\n" +
@@ -188,7 +161,5 @@ class SynchronousClientTest {
         Assertions.assertEquals(expTurnResponseModel.playerCrossId(), methTurnResponseModel.playerCrossId());
         Assertions.assertEquals(expTurnResponseModel.winnerId(), methTurnResponseModel.winnerId());
         Assertions.assertArrayEquals(expTurnResponseModel.coordinates(), methTurnResponseModel.coordinates());
-
-        tearDownServer();
     }
 }

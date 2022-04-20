@@ -4,32 +4,20 @@ import cz.ondrejguth.cz.jobs.piskvorky.client_api.CoordinateModel;
 import cz.ondrejguth.cz.jobs.piskvorky.client_api.CoordinatesUsedException;
 import cz.ondrejguth.cz.jobs.piskvorky.client_api.SynchronousClient;
 import cz.ondrejguth.cz.jobs.piskvorky.client_api.TurnResponseModel;
-import cz.ondrejguth.cz.jobs.piskvorky.player.RandomPlayer;
+import cz.ondrejguth.cz.jobs.piskvorky.player_engine.RandomPlayer;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @AllArgsConstructor
 @Slf4j
 public class PlayerFacade implements ApplicationListener<ApplicationReadyEvent> {
     private final SynchronousClient client;
     private final RandomPlayer player;
-
-    public int getMinXCoordinate() {
-        return client.getMinXCoordinate();
-    }
-
-    public int getMaxXCoordinate() {
-        return client.getMaxXCoordinate();
-    }
-
-    public int getMinYCoordinate() { return client.getMinYCoordinate();}
-
-    public int getMaxYCoordinate() { return client.getMaxYCoordinate();}
-
 
     public void playGame() {
         final var connModel = client.newGame();
