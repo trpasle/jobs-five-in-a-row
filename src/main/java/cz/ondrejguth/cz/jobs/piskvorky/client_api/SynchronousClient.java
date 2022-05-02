@@ -18,10 +18,9 @@ import java.util.concurrent.TimeUnit;
 public class SynchronousClient {
     public static final int MAX_WAIT_BETWEEN_REQUESTS = 10;
     private final UserTokenModel userTokenModel;
+    private final WebClientConnectionManager clientConnection;
     private LocalDateTime lastRequestTimestamp;
     private int secondsBetweenRequests = 1;
-
-    private final WebClientConnectionManager clientConnection;
 
     public SynchronousClient(@Value("${cz.ondrejguth.cz.jobs.piskvorky.userToken}") String userToken, WebClientConnectionManager clientConnection) {
         userTokenModel = new UserTokenModel(userToken);
@@ -51,10 +50,14 @@ public class SynchronousClient {
                 log.debug("Too many requests, waiting before attempting to start new game again");
                 waitUntilNextRequestAllowed();
                 secondsBetweenRequests++;
+            } catch (final WebClientResponseException.Unauthorized e) {
+                log.error("Invalid user token");
+                throw e;
             }
     }
 
-    public TurnResponseModel play(final GameConnectionModel gameConnectionModel, final int x, final int y) {
+    public TurnResponseModel play(final GameConnectionModel gameConnectionModel, final int x, final int y)
+            throws CoordinatesUsedException, InvalidGameException {
         while (true)
             try {
                 waitUntilNextRequestAllowed();
@@ -62,7 +65,7 @@ public class SynchronousClient {
             } catch (final WebClientResponseException.TooManyRequests e) {
                 log.debug("Too many requests, waiting before attempting to take turn again");
                 secondsBetweenRequests++;
-            } catch (final WebClientResponseException.NotAcceptable|WebClientResponseException.Gone e) {
+            } catch (final WebClientResponseException.NotAcceptable | WebClientResponseException.Gone e) {
                 log.debug("It is other's player turn, waiting and trying again");
             } catch (final WebClientResponseException.Conflict e) {
                 throw new CoordinatesUsedException(e);
