@@ -10,6 +10,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.netty.http.client.PrematureCloseException;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -42,7 +43,7 @@ public class SynchronousClient {
         lastRequestTimestamp = now;
     }
 
-    public GameConnectionModel newGame() {
+    public GameConnectionModel newGame() throws TooLongWaitingException, WebClientResponseException.Unauthorized {
         while (true)
             try {
                 return clientConnection.getClient().post().uri(ApiV1Constants.NEW_GAME_URI).bodyValue(userTokenModel).retrieve().bodyToMono(GameConnectionModel.class).block();
@@ -51,13 +52,14 @@ public class SynchronousClient {
                 waitUntilNextRequestAllowed();
                 secondsBetweenRequests++;
             } catch (final WebClientResponseException.Unauthorized e) {
-                log.error("Invalid user token");
+                log.error("Invalid user token. Invalid/expired registration?");
                 throw e;
             }
     }
 
     public TurnResponseModel play(final GameConnectionModel gameConnectionModel, final int x, final int y)
-            throws CoordinatesUsedException, InvalidGameException {
+            throws CoordinatesUsedException, InvalidGameException, TooLongWaitingException {
+        Objects.requireNonNull(gameConnectionModel);
         while (true)
             try {
                 waitUntilNextRequestAllowed();
@@ -70,6 +72,7 @@ public class SynchronousClient {
             } catch (final WebClientResponseException.Conflict e) {
                 throw new CoordinatesUsedException(e);
             } catch (final WebClientResponseException.Unauthorized e) {
+                log.debug("Game ID forgotten by the API?", e);
                 throw new InvalidGameException();
             } catch (final WebClientRequestException e) {
                 if (e.getCause() instanceof PrematureCloseException)
