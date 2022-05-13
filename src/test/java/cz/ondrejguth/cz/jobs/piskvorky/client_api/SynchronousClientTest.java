@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.io.IOException;
 
@@ -58,6 +59,25 @@ class SynchronousClientTest {
         Assertions.assertEquals(recReq.getMethod(), "POST");
         Assertions.assertEquals(recReq.getPath(), ApiV1Constants.NEW_GAME_URI);
         Assertions.assertTrue(recReq.getBody().indexOf(ByteString.encodeUtf8("userToken")) > -1);
+    }
+
+    @Test
+    void newGameInvalidUserToken() {
+        mockApi.enqueue(
+                new MockResponse().setResponseCode(401).addHeader("content-type", "application/json ").setBody("{\n" +
+                        "  \"statusCode\": 401,\n" +
+                        "  \"errors\": {\n" +
+                        "    \"userToken\": \"Invalid user token.\"\n" +
+                        "  },\n" +
+                        "  \"headers\": {}\n" +
+                        "}")
+        );
+        Assertions.assertThrows(WebClientResponseException.Unauthorized.class, () -> instance.newGame());
+    }
+
+    @Test
+    void newGameTooLongWaiting() {
+        //TODO
     }
 
     @Test
